@@ -8,6 +8,7 @@ import (
 
     "github.com/sugoiuguu/awoo-gopher/awoo"
     "github.com/prologic/go-gopher"
+    "github.com/eidolon/wordwrap"
 )
 
 type Handler func(gopher.ResponseWriter, *gopher.Request, []string)
@@ -20,6 +21,8 @@ type route struct {
 type Router struct {
     routes []*route
 }
+
+var wrap = wordwrap.Wrapper(80, false)
 
 func main() {
     router := new(Router)
@@ -88,7 +91,8 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     }
 
     w.WriteInfo(fmt.Sprintf("/%s/ - %s", d.Name, d.Description))
-    for _,line := range strings.Split(d.Rules, "\n") {
+    w.WriteInfo("")
+    for _,line := range strings.Split(wrap(d.Rules), "\n") {
         w.WriteInfo(line)
     }
     w.WriteInfo("")
@@ -120,13 +124,13 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
             Selector: fmt.Sprintf("/thread/%d", t.Id),
             Description: desc,
         })
-        for _,line := range strings.Split(t.Comment, "\n") {
+        for _,line := range strings.Split(wrap(t.Comment), "\n") {
             w.WriteInfo(line)
         }
+        w.WriteInfo("")
     }
 
     next,_ := strconv.Atoi(p[2])
-    w.WriteInfo("")
     w.WriteItem(&gopher.Item{
         Type: gopher.DIRECTORY,
         Selector: fmt.Sprintf("/board/%s/%d", p[1], next + 1),
@@ -154,12 +158,12 @@ func thread(w gopher.ResponseWriter, r *gopher.Request, p []string) {
             Selector: "/",
             Description: desc,
         })
-        for _,line := range strings.Split(p.Comment, "\n") {
+        for _,line := range strings.Split(wrap(p.Comment), "\n") {
             w.WriteInfo(line)
         }
+        w.WriteInfo("")
     }
 
-    w.WriteInfo("")
     w.WriteInfo(fmt.Sprintf("Last bumped on %s", rp[0].LastBumped))
 }
 
