@@ -19,12 +19,14 @@ type Client struct {
 }
 
 func NewClient(host string, tls bool) *Client {
+    c := &Client{}
     if tls {
-        host = "https://" + host
+        c.host = "https://" + host
     } else {
-        host = "http://" + host
+        c.host = "http://" + host
     }
-    return &Client{host: host, str: host}
+    c.str = host
+    return c
 }
 
 func (c *Client) String() string {
