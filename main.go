@@ -48,6 +48,11 @@ func (r *Router) ServeGopher(w gopher.ResponseWriter, rq *gopher.Request) {
 }
 
 func index(w gopher.ResponseWriter, r *gopher.Request, p []string) {
+    if r.Selector != "/" {
+        gopher.Error(w, fmt.Sprintf("%q not found", r.Selector))
+        return
+    }
+
     boards, err := awoo.Boards()
     if err != nil {
         gopher.Error(w, err.Error())
@@ -55,18 +60,28 @@ func index(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     }
 
     w.WriteInfo(awoo.DefaultHost + " boards")
+    w.WriteInfo("")
 
     for _,board := range boards {
         w.WriteItem(&gopher.Item{
             Type: gopher.DIRECTORY,
             Selector: fmt.Sprintf("/board/%s/0", board),
-            Description: board,
+            Description: fmt.Sprintf("/%s/", board),
         })
     }
+
+    w.WriteInfo("")
+    w.WriteInfo("awoo-gopher -- the best way to lurk a textboard")
 }
 
 func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     d, err := awoo.Details(p[1])
+    if err != nil {
+        gopher.Error(w, err.Error())
+        return
+    }
+
+    thrs, err := awoo.ThreadsPage(p[1], p[2])
     if err != nil {
         gopher.Error(w, err.Error())
         return
@@ -78,12 +93,6 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     }
     w.WriteInfo("")
 
-    thrs, err := awoo.ThreadsPage(p[1], p[2])
-    if err != nil {
-        gopher.Error(w, err.Error())
-        return
-    }
-
     var desc string
     var showBoard bool
 
@@ -92,12 +101,19 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     }
 
     for _,t := range thrs {
-        if showBoard {
-            desc = fmt.Sprintf("Nr. %d | /%s/ | %d Replies | %s | %s",
-                                     t.Id, t.Board, t.NrReplies, t.DatePosted, t.Title)
-        } else {
-            desc = fmt.Sprintf("Nr. %d | %d Replies | %s | %s",
-                                     t.Id, t.NrReplies, t.DatePosted, t.Title)
+        switch {
+        default:
+            desc = fmt.Sprintf("Nr. %d (%s) | %d Replies | %s | %s",
+                                     t.Id, hash(t), t.NrReplies, t.DatePosted, t.Title)
+        case showBoard && t.IsSticky:
+            desc = fmt.Sprintf("Nr. !%d (%s) | /%s/ | %d Replies | %s | %s",
+                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
+        case t.IsSticky:
+            desc = fmt.Sprintf("Nr. !%d (%s) | /%s/ | %d Replies | %s | %s",
+                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
+        case showBoard:
+            desc = fmt.Sprintf("Nr. %d (%s) | /%s/ | %d Replies | %s | %s",
+                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
         }
         w.WriteItem(&gopher.Item{
             Type: gopher.DIRECTORY,
@@ -114,7 +130,7 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     w.WriteItem(&gopher.Item{
         Type: gopher.DIRECTORY,
         Selector: fmt.Sprintf("/board/%s/%d", p[1], next + 1),
-        Description: fmt.Sprintf("%s - page %d", p[1], next + 2),
+        Description: fmt.Sprintf("/%s/ - page %d", p[1], next + 2),
     })
 }
 
@@ -131,8 +147,8 @@ func thread(w gopher.ResponseWriter, r *gopher.Request, p []string) {
     var desc string
 
     for _,p := range rp {
-        desc = fmt.Sprintf("Nr. %d | %s",
-                           p.Id, p.DatePosted)
+        desc = fmt.Sprintf("Nr. %d (%s) | %s",
+                           p.Id, hash(p), p.DatePosted)
         w.WriteItem(&gopher.Item{
             Type: gopher.DIRECTORY,
             Selector: "/",
@@ -142,4 +158,14 @@ func thread(w gopher.ResponseWriter, r *gopher.Request, p []string) {
             w.WriteInfo(line)
         }
     }
+
+    w.WriteInfo("")
+    w.WriteInfo(fmt.Sprintf("Last bumped on %s", rp[0].LastBumped))
+}
+
+func hash(p *awoo.Post) string {
+    if p.CapCode != "" {
+        return p.CapCode
+    }
+    return "#"+p.Hash
 }
