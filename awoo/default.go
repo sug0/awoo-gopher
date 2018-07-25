@@ -1,7 +1,11 @@
 package awoo
 
-const DefaultHost = "dangeru.us"
-var defcli = NewClient(DefaultHost, true)
+const (
+    DefaultHost    = "dangeru.us"
+    DefaultPort    = 80
+    DefaultPortTLS = 443
+)
+var defcli = NewClient(DefaultHost, DefaultPortTLS, true)
 
 func Boards() ([]string, error) {
     return defcli.Boards()
@@ -27,7 +31,7 @@ func Replies(threadId string) ([]*Post, error) {
     return defcli.Replies(threadId)
 }
 
-func NewThread(board, title, comment string) error {
+func NewThread(board, title, comment string) (string, error) {
     return defcli.NewThread(board, title, comment)
 }
 

@@ -7,44 +7,48 @@ import (
     "net/url"
     "encoding/json"
     "strings"
+    "regexp"
 )
 
 var (
     ErrMsgTooLong = errors.New("awoo: message length exceeds 500 characters")
+    ErrNoRedirect = errors.New("awoo: couldn't find redirect link in http response")
 )
 
 type Client struct {
     host string
-    str  string
+    cli  http.Client
+    reg  *regexp.Regexp
 }
 
-func NewClient(host string, tls bool) *Client {
+func NewClient(host string, portno int, tls bool) *Client {
     c := &Client{}
+    c.reg = regexp.MustCompile(`\d+`)
     if tls {
-        c.host = "https://" + host
+        if portno == 443 {
+            c.host = "https://" + host
+        } else {
+            c.host = fmt.Sprintf("https://%s:%d", host, portno)
+        }
     } else {
-        c.host = "http://" + host
+        if portno == 80 {
+            c.host = "http://" + host
+        } else {
+            c.host = fmt.Sprintf("http://%s:%d", host, portno)
+        }
     }
-    c.str = host
+    c.cli.CheckRedirect = ignoreRedirect
     return c
 }
 
-func (c *Client) String() string {
-    return c.str
-}
-
-func (c *Client) GoString() string {
-    return c.String()
-}
-
 func (c *Client) get(path string) (resp *http.Response, err error) {
-    return http.Get(fmt.Sprintf("%s%s", c.host, path))
+    return c.cli.Get(fmt.Sprintf("%s%s", c.host, path))
 }
 
 func (c *Client) post(path string, form url.Values) (resp *http.Response, err error) {
-    return http.Post(fmt.Sprintf("%s%s", c.host, path),
-                     "application/x-www-form-urlencoded",
-                     strings.NewReader(form.Encode()))
+    return c.cli.Post(fmt.Sprintf("%s%s", c.host, path),
+                      "application/x-www-form-urlencoded",
+                      strings.NewReader(form.Encode()))
 }
 
 func (c *Client) decode(dest interface{}, path string) error {
@@ -106,9 +110,9 @@ func (c *Client) Replies(threadId string) ([]*Post, error) {
     return rsp, nil
 }
 
-func (c *Client) NewThread(board, title, comment string) error {
+func (c *Client) NewThread(board, title, comment string) (string, error) {
     if len(comment) > 500 {
-        return ErrMsgTooLong
+        return "", ErrMsgTooLong
     }
     resp, err := c.post("/post", url.Values{
         "board": {board},
@@ -116,10 +120,14 @@ func (c *Client) NewThread(board, title, comment string) error {
         "comment": {comment},
     })
     if err != nil {
-        return err
+        return "", err
     }
     resp.Body.Close()
-    return nil
+    link := c.reg.FindStringSubmatch(resp.Header.Get("Location"))
+    if link == nil {
+        return "", ErrNoRedirect
+    }
+    return link[0], nil
 }
 
 func (c *Client) NewReply(board, threadId, comment string) error {
@@ -136,4 +144,8 @@ func (c *Client) NewReply(board, threadId, comment string) error {
     }
     resp.Body.Close()
     return nil
+}
+
+func ignoreRedirect(*http.Request, []*http.Request) error {
+    return http.ErrUseLastResponse
 }

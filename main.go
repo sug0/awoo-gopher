@@ -11,7 +11,7 @@ import (
     "github.com/eidolon/wordwrap"
 )
 
-type Handler func(gopher.ResponseWriter, *gopher.Request, []string)
+type Handler = func(gopher.ResponseWriter, *gopher.Request, []string)
 
 type route struct {
     re *regexp.Regexp
@@ -108,16 +108,16 @@ func threads(w gopher.ResponseWriter, r *gopher.Request, p []string) {
         switch {
         default:
             desc = fmt.Sprintf("Nr. %d (%s) | %d Replies | %s | %s",
-                                     t.Id, hash(t), t.NrReplies, t.DatePosted, t.Title)
+                               t.Id, hash(t), t.NrReplies, t.DatePosted, t.Title)
         case showBoard && t.IsSticky:
             desc = fmt.Sprintf("Nr. !%d (%s) | /%s/ | %d Replies | %s | %s",
-                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
+                               t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
         case t.IsSticky:
-            desc = fmt.Sprintf("Nr. !%d (%s) | /%s/ | %d Replies | %s | %s",
-                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
+            desc = fmt.Sprintf("Nr. !%d (%s) | %d Replies | %s | %s",
+                               t.Id, hash(t), t.NrReplies, t.DatePosted, t.Title)
         case showBoard:
             desc = fmt.Sprintf("Nr. %d (%s) | /%s/ | %d Replies | %s | %s",
-                                     t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
+                               t.Id, hash(t), t.Board, t.NrReplies, t.DatePosted, t.Title)
         }
         w.WriteItem(&gopher.Item{
             Type: gopher.DIRECTORY,
