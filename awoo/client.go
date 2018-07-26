@@ -123,7 +123,7 @@ func (c *Client) NewThread(board, title, comment string) (string, error) {
     resp.Body.Close()
     id, err := extractThrID(resp.Header.Get("Location"))
     if err != nil {
-        return "", ErrNoRedirect
+        return "", err
     }
     return id, nil
 }
