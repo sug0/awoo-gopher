@@ -7,7 +7,7 @@ import (
     "net/url"
     "encoding/json"
     "strings"
-    "regexp"
+    "unicode"
 )
 
 var (
@@ -18,12 +18,10 @@ var (
 type Client struct {
     host string
     cli  http.Client
-    reg  *regexp.Regexp
 }
 
 func NewClient(host string, portno int, tls bool) *Client {
     c := &Client{}
-    c.reg = regexp.MustCompile(`\d+`)
     if tls {
         if portno == 443 {
             c.host = "https://" + host
@@ -123,11 +121,11 @@ func (c *Client) NewThread(board, title, comment string) (string, error) {
         return "", err
     }
     resp.Body.Close()
-    link := c.reg.FindStringSubmatch(resp.Header.Get("Location"))
-    if link == nil {
+    id, err := extractThrID(resp.Header.Get("Location"))
+    if err != nil {
         return "", ErrNoRedirect
     }
-    return link[0], nil
+    return id, nil
 }
 
 func (c *Client) NewReply(board, threadId, comment string) error {
@@ -148,4 +146,32 @@ func (c *Client) NewReply(board, threadId, comment string) error {
 
 func ignoreRedirect(*http.Request, []*http.Request) error {
     return http.ErrUseLastResponse
+}
+
+func extractThrID(url string) (string, error) {
+    var i int
+    var ok bool
+    var id []rune
+
+    slc := []rune(url)
+
+    for i = range slc {
+        if unicode.IsDigit(slc[i]) {
+            ok = true
+            break
+        }
+    }
+
+    if !ok {
+        return "", ErrNoRedirect
+    }
+
+    for _,ch := range slc[i:] {
+        if !unicode.IsDigit(ch) {
+            break
+        }
+        id = append(id, ch)
+    }
+
+    return string(id), nil
 }

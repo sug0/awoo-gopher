@@ -5,7 +5,12 @@ const (
     DefaultPort    = 80
     DefaultPortTLS = 443
 )
-var defcli = NewClient(DefaultHost, DefaultPortTLS, true)
+
+var defcli *Client
+
+func init() {
+    defcli = NewClient(DefaultHost, DefaultPortTLS, true)
+}
 
 func Boards() ([]string, error) {
     return defcli.Boards()
