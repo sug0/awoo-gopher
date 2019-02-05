@@ -6,7 +6,7 @@ import (
     "strings"
     "strconv"
 
-    "github.com/sugoiuguu/awoo-gopher/awoo"
+    "github.com/sug0/awoo-gopher/awoo"
     "github.com/prologic/go-gopher"
     "github.com/eidolon/wordwrap"
 )
