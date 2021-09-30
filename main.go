@@ -7,8 +7,9 @@ import (
     "strconv"
 
     "github.com/sug0/awoo-gopher/awoo"
-    "github.com/prologic/go-gopher"
     "github.com/eidolon/wordwrap"
+
+    "git.mills.io/prologic/go-gopher"
 )
 
 type Handler = func(gopher.ResponseWriter, *gopher.Request, []string)
